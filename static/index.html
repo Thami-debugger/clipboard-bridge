@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Clipboard Bridge - Free Clipboard Sync</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px 30px;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .tagline {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+    }
+    
+    .room-code-display {
+      background: #f8f9fa;
+      border: 2px dashed #667eea;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .room-code {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      color: #667eea;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      margin: 15px 0;
+    }
+    
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    button {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.secondary {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+    
+    input {
+      width: 100%;
+      padding: 14px;
+      font-size: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 14px;
+      font-size: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-family: monospace;
+      resize: vertical;
+      margin: 8px 0;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .device-count {
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      margin: 10px 0;
+    }
+    
+    .instructions {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .instructions ol {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+    
+    .copy-btn {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 Clipboard Bridge</h1>
+    <p class="tagline">Free instant clipboard sync between devices</p>
+    
+    <!-- Start Screen -->
+    <div id="startScreen">
+      <div class="section">
+        <button onclick="createNewRoom()">Create New Room</button>
+        <button class="secondary" onclick="showJoinRoom()">Join Existing Room</button>
+      </div>
+      
+      <div id="joinSection" class="hidden section">
+        <input type="text" id="roomCodeInput" placeholder="Enter Room Code" maxlength="6">
+        <button onclick="joinRoom()">Join Room</button>
+      </div>
+      
+      <div class="instructions">
+        <strong>How it works:</strong>
+        <ol>
+          <li>Create a room or join an existing one</li>
+          <li>Open the same room code on your other device</li>
+          <li>Copy text on one device - it appears on all connected devices!</li>
+        </ol>
+      </div>
+    </div>
+    
+    <!-- Room Screen -->
+    <div id="roomScreen" class="hidden">
+      <div class="room-code-display">
+        <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Room Code:</div>
+        <div class="room-code" id="roomCodeDisplay">------</div>
+        <button class="copy-btn" onclick="copyRoomCode()">Copy Code</button>
+      </div>
+      
+      <div class="status disconnected" id="status">Connecting...</div>
+      <div class="device-count" id="deviceCount">0 devices connected</div>
+      
+      <div class="section">
+        <textarea id="clipboardText" placeholder="Text copied on any device will appear here..."></textarea>
+        <button onclick="sendClipboard()">📤 Send to All Devices</button>
+      </div>
+      
+      <button class="secondary" onclick="leaveRoom()">Leave Room</button>
+    </div>
+  </div>
+
+  <script>
+    let currentRoomCode = '';
+    let ws = null;
+    let deviceCount = 0;
+
+    async function createNewRoom() {
+      try {
+        const response = await fetch('/create-room', { method: 'POST' });
+        const data = await response.json();
+        joinRoomWithCode(data.room_code);
+      } catch (error) {
+        alert('Error creating room: ' + error.message);
+      }
+    }
+
+    function showJoinRoom() {
+      document.getElementById('joinSection').classList.remove('hidden');
+      document.getElementById('roomCodeInput').focus();
+    }
+
+    function joinRoom() {
+      const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+      if (code.length !== 6) {
+        alert('Room code must be 6 characters');
+        return;
+      }
+      joinRoomWithCode(code);
+    }
+
+    async function joinRoomWithCode(roomCode) {
+      currentRoomCode = roomCode;
+      
+      // Hide start screen, show room screen
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('roomScreen').classList.remove('hidden');
+      document.getElementById('roomCodeDisplay').textContent = roomCode;
+      
+      // Connect WebSocket
+      connectWebSocket(roomCode);
+      
+      // Update device count
+      updateDeviceCount();
+    }
+
+    function connectWebSocket(roomCode) {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/ws/${roomCode}`);
+      
+      ws.onopen = () => {
+        document.getElementById('status').textContent = 'Connected ✅';
+        document.getElementById('status').className = 'status connected';
+        updateDeviceCount();
+      };
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'sync' && data.content) {
+          document.getElementById('clipboardText').value = data.content;
+          
+          // Try to write to clipboard
+          navigator.clipboard.writeText(data.content).catch(e => {
+            console.log('Clipboard write failed:', e);
+          });
+        }
+      };
+      
+      ws.onerror = () => {
+        document.getElementById('status').textContent = 'Connection Error ❌';
+        document.getElementById('status').className = 'status disconnected';
+      };
+      
+      ws.onclose = () => {
+        document.getElementById('status').textContent = 'Disconnected ❌';
+        document.getElementById('status').className = 'status disconnected';
+      };
+    }
+
+    async function sendClipboard() {
+      const text = document.getElementById('clipboardText').value;
+      if (!text.trim()) {
+        alert('Please enter some text first');
+        return;
+      }
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'clipboard', content: text }));
+        
+        // Also POST to REST API for reliability
+        try {
+          await fetch('/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ room_code: currentRoomCode, content: text })
+          });
+        } catch (e) {
+          console.error('Sync error:', e);
+        }
+      } else {
+        alert('Not connected to room');
+      }
+    }
+
+    async function updateDeviceCount() {
+      if (!currentRoomCode) return;
+      
+      try {
+        const response = await fetch(`/room/${currentRoomCode}/status`);
+        const data = await response.json();
+        deviceCount = data.devices_connected;
+        document.getElementById('deviceCount').textContent = 
+          `${deviceCount} device${deviceCount !== 1 ? 's' : ''} connected`;
+      } catch (e) {
+        console.error('Status update error:', e);
+      }
+    }
+
+    function copyRoomCode() {
+      const code = document.getElementById('roomCodeDisplay').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Room code copied! Share it with your other device.');
+      }).catch(() => {
+        alert('Room code: ' + code);
+      });
+    }
+
+    function leaveRoom() {
+      if (ws) {
+        ws.close();
+      }
+      currentRoomCode = '';
+      document.getElementById('roomScreen').classList.add('hidden');
+      document.getElementById('startScreen').classList.remove('hidden');
+      document.getElementById('clipboardText').value = '';
+      document.getElementById('joinSection').classList.add('hidden');
+      document.getElementById('roomCodeInput').value = '';
+    }
+
+    // Update device count every 5 seconds
+    setInterval(() => {
+      if (currentRoomCode) {
+        updateDeviceCount();
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
